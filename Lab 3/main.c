@@ -2,127 +2,252 @@
 /**************  13 March 2019   ******************/
 /***************************************************/
 
-#include <msp430.h>
 
-/* Peripherals.c and .h are where the functions that implement
- * the LEDs and keypad, etc are. It is often useful to organize
- * your code by putting like functions together in files.
- * You include the header associated with that file(s)
- * into the main file of your project. */
+#include <msp430.h>
+#include <stdio.h>
 #include "peripherals.h"
 
-// Function Prototypes
-void swDelay(char numLoops);
+long unsigned int timer_cnt=0;
+long unsigned int prev_time=0;
+char tdir = 1;
+int SongNote = 0;
+int SONG[28];
+int flag = 0;
 
-// Declare globals here
+void runtimerA2(void);
+void stoptimerA2(int reset);
+__interrupt void TimerA2_ISR (void);
+//void updateLCD(char currentDisplay[], char string[]);
 
-// Main
-void main(void)
-
-{
-    unsigned char currKey=0, dispSz = 3;
-    unsigned char dispThree[3];
-
-    // Define some local variables
-    float a_flt = 190.68;
-    int  test = 0x0600, i=0;     // In C prefix 0x means the number that follows is in hex
-    long unsigned X= 123456;    // No prefix so number is assumed to be in decimal
-    unsigned char myGrade='A';
-    unsigned char initial='S';
-    unsigned char your_name[14] = "adison";
-                                    // What happens when you change the array length?
-                                    // What should it be? Do you need null terminator /n ?
+void configUserLED(char inbits);
+void configUserButtons(void);
+void getState(void);
 
 
-    WDTCTL = WDTPW | WDTHOLD;    // Stop watchdog timer. Always need to stop this!!
-                                 // You can then configure it properly, if desired
 
-    // Some utterly useless instructions -- Step through them
-    // What size does the Code Composer MSP430 Compiler use for the
-    // following variable types? A float, an int, a long integer and a char?
-    a_flt = a_flt*test;
-    X = test+X;
-    test = test-myGrade;    // A number minus a letter?? What's actually going on here?
-                            // What value stored in myGrade (i.e. what's the ASCII code for "A")?
-                            // Thus, what is the new value of test? Explain?
+enum GAME_STATE { WELCOME = 0, COUNTDOWN = 1, PLAY_NOTE = 2, CHECK_NOTE = 3, GAME_OVER = 4, YOU_WIN = 5, EXIT = 6};
+GAME_STATE = YOU_WIN;
 
-    // Useful code starts here
+struct Song {
+    int frequency[28];
+    int duration[28];
+}
+MiiSong = {
+    {0, 0, 0},
+    {0, 0, 0}
+};
+
+unsigned char currKey;
+int main(void) {
+    char currentDisplay[] = "new";
+    WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
+    _BIS_SR(GIE); //enables interrupts
+    runtimerA2(); //start timer
+
     initLeds();
-
     configDisplay();
     configKeypad();
 
-    // *** Intro Screen ***
-    Graphics_clearDisplay(&g_sContext); // Clear the display
+    int ticksPerSec = 100;
+    int LEDbit = 0;
 
-    // Write some text to the display
-    Graphics_drawStringCentered(&g_sContext, "Welcome", AUTO_STRING_LENGTH, 60, 15, TRANSPARENT_TEXT);
-    Graphics_drawStringCentered(&g_sContext, "to", AUTO_STRING_LENGTH, 48, 25, TRANSPARENT_TEXT);
-    Graphics_drawStringCentered(&g_sContext, "ECE2049-C24!", AUTO_STRING_LENGTH, 48, 48, TRANSPARENT_TEXT);
-
-    Graphics_drawStringCentered(&g_sContext, your_name, AUTO_STRING_LENGTH, 48, 60, TRANSPARENT_TEXT);
-
-
-    // Draw a box around everything because it looks nice
-    Graphics_Rectangle box = {.xMin = 5, .xMax = 91, .yMin = 5, .yMax = 91 };
-    Graphics_drawRectangle(&g_sContext, &box);
-
-    // We are now done writing to the display.  However, if we stopped here, we would not
-    // see any changes on the actual LCD.  This is because we need to send our changes
-    // to the LCD, which then refreshes the display.
-    // Since this is a slow operation, it is best to refresh (or "flush") only after
-    // we are done drawing everything we need.
-    Graphics_flushBuffer(&g_sContext);
-
-    dispThree[0] = ' ';
-    dispThree[2] = ' ';
-
-    while (1)    // Forever loop
-    {
-        // Check if any keys have been pressed on the 3x4 keypad
+    unsigned char currKey = getKey();
+    unsigned char currKeyint = getKey();
+    while(1){
+        int my_state = GAME_STATE;
         currKey = getKey();
-        if (currKey == '*')
-            BuzzerOn();
-        if (currKey == '#')
-            BuzzerOff();
-        if ((currKey >= '0') && (currKey <= '9'))
-            setLeds(currKey - 0x30);
-
-        if (currKey)
-        {
-            dispThree[1] = currKey;
-            // Draw the new character to the display
-            Graphics_drawStringCentered(&g_sContext, dispThree, dispSz, 48, 55, OPAQUE_TEXT);
-
-            // Refresh the display so it shows the new data
-            Graphics_flushBuffer(&g_sContext);
-
-            // wait awhile before clearing LEDs
-            swDelay(1);
-            setLeds(0);
+        char currKeyint = getKey();
+        switch(GAME_STATE){
+            case WELCOME: //display Welcome Screen
+               setLeds(0);
+               Graphics_drawStringCentered(&g_sContext, "Guitar Hero", AUTO_STRING_LENGTH, 48, 15, TRANSPARENT_TEXT);
+               Graphics_flushBuffer(&g_sContext);
+               if (currKey == 42)
+               {
+                   GAME_STATE = COUNTDOWN;
+                   Graphics_clearDisplay(&g_sContext); // Clear the display
+               }
+               else
+               {
+                   GAME_STATE = WELCOME;
+               }
+               prev_time = timer_cnt;
+               break;
+            case COUNTDOWN: //counts down
+                currKeyint = (getKey() - 48);
+                currKey = getKey();
+                Graphics_flushBuffer(&g_sContext);
+                //prev_time = timer_cnt;
+                 if (currKey == 35) //#
+                 {
+                     GAME_STATE = EXIT;
+                     break;
+                 }
+                 if ((timer_cnt - prev_time) > (500)){
+                     setLeds(0);
+                     Graphics_clearDisplay(&g_sContext); // Clear the display
+                     prev_time = timer_cnt;
+                     GAME_STATE = PLAY_NOTE;
+                 }
+                 else if ((timer_cnt - prev_time) > (400)){
+                     Graphics_drawStringCentered(&g_sContext, "GO!!!", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                     setLeds(BIT3|BIT2|BIT1|BIT0);
+                 }
+                 else if((timer_cnt - prev_time) > (3*100)){
+                     Graphics_drawStringCentered(&g_sContext, "  1  ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                     setLeds(BIT2);
+                 }
+                 else if ((timer_cnt - prev_time) > (2*100)){
+                     Graphics_drawStringCentered(&g_sContext, "  2  ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                     setLeds(BIT1);
+                 }
+                 else if ((timer_cnt - prev_time) > (1*100)){
+                     Graphics_drawStringCentered(&g_sContext, "  3  ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                     setLeds(BIT0);
+                 }
+                 if ((GAME_STATE != EXIT)&&(GAME_STATE != PLAY_NOTE)){
+                     GAME_STATE = COUNTDOWN;
+                 }
+                 break;
+            case PLAY_NOTE:
+                currKey = getKey();
+                if (currKey == 35) //#
+                {
+                    GAME_STATE = EXIT;
+                    break;
+                }
+                //play the note via a function & flash an LED
+                BuzzerOn(MiiSong.frequency[SongNote]);
+                setLeds(BIT1); //change later
+                if((timer_cnt - prev_time) >= MiiSong.duration[SongNote]){
+                    BuzzerOff();
+                    setLeds(0);
+                    SongNote++;
+                    GAME_STATE = CHECK_NOTE;
+                }
+                GAME_STATE = PLAY_NOTE;
+                break;
+            case CHECK_NOTE:
+                break;
+            case GAME_OVER:
+                break;
+            case YOU_WIN:
+                BuzzerOn(8);
+                break;
+            case EXIT:
+                setLeds(0);
+                Graphics_clearDisplay(&g_sContext); // Clear the display
+                GAME_STATE = WELCOME;
+                break;
         }
-
-    }  // end while (1)
-}
-
-
-void swDelay(char numLoops)
-{
-	// This function is a software delay. It performs
-	// useless loops to waste a bit of time
-	//
-	// Input: numLoops = number of delay loops to execute
-	// Output: none
-	//
-	// smj, ECE2049, 25 Aug 2013
-
-	volatile unsigned int i,j;	// volatile to prevent removal in optimization
-			                    // by compiler. Functionally this is useless code
-
-	for (j=0; j<numLoops; j++)
-    {
-    	i = 50000 ;					// SW Delay
-   	    while (i > 0)				// could also have used while (i)
-	       i--;
     }
 }
+void runtimerA2(void){
+// This function configures and starts Timer A2
+// Timer is counting ~0.01 seconds
+//
+// Input: none, Output: none
+//
+// smj, ECE2049, 17 Sep 2013
+//
+// Use ACLK, 16 Bit, up mode, 1 divider
+    TA2CTL = TASSEL_1 + MC_1 + ID_0;
+    TA2CCR0 = 327; // 327+1 = 328 ACLK tics = ~1/100 seconds
+    TA2CCTL0 = CCIE; // TA2CCR0 interrupt enabled
+}
+void stoptimerA2(int reset)
+{
+// This function stops Timer A2 andresets the global time variable
+// if input reset = 1
+//
+// Input: reset, Output: none
+//
+// smj, ECE2049, 17 Sep 2013
+//
+    TA2CTL = MC_0; // stop timer
+    TA2CCTL0 &= ~CCIE; // TA2CCR0 interrupt disabled
+        if(reset)
+            timer_cnt=0;
+}
+// Timer A2 interrupt service routine
+#pragma vector=TIMER2_A0_VECTOR
+__interrupt void TimerA2_ISR (void){
+    if(tdir){
+        timer_cnt++;
+//        if (timer_cnt == 60000)
+//            timer_cnt = 0;
+//        if (timer_cnt%100==0){ // blink LEDs once a second
+//            P1OUT = P1OUT ^ BIT0;
+//            P4OUT ^= BIT7;
+//        }
+    }
+    else
+        timer_cnt--;
+}
+
+#pragma vector=TIMER2_A1_VECTOR
+__interrupt void TimerA1_ISR (void){
+    if(currKey == 35){
+        flag = 1;
+        GAME_STATE = EXIT;
+        TA1CCTL0 &= ~CCIFG;
+    }
+    else
+        TA1CCTL0 &= ~CCIFG;
+}
+
+void configUserLED(char inbits){
+    P1SEL &= (BIT0);
+    P4SEL &= (BIT7);
+
+    P1DIR |= (BIT0);
+    P4DIR |= (BIT7);
+
+    P1OUT = inbits &= BIT0;
+    P2OUT = inbits &= BIT1;
+
+}
+void configUserButtons(void){
+    P7SEL &= (BIT0|BIT4); //S1, S4
+    P3SEL &= (BIT7); //S2
+    P2SEL &- (BIT2); //S3
+
+    P7DIR &= (BIT0|BIT4); //S1, S4
+    P3DIR &= (BIT7); //S2
+    P2DIR &- (BIT2); //S3
+
+    P7REN |= (BIT0|BIT4); //S1, S4
+    P3REN |= (BIT7); //S2
+    P2REN |= (BIT2); //S3\
+
+    P7OUT |= (BIT0|BIT4); //S1, S4
+    P3OUT |= (BIT7); //S2
+    P2OUT |= (BIT2); //S3
+
+    //Configure # to be an interrupt pin
+
+}
+void getState(void){
+        uint8_t result = 0x00;
+        if (~P7IN & BIT0) {
+            result = BIT3;
+        }
+        if (~P3IN & BIT7) {
+            result = BIT2;
+        }
+        if (~P2IN & BIT2) {
+            result = BIT1;
+        }
+        if (~P7IN & BIT4) { //bit 4 is set
+            result = BIT0;
+        }
+        return result;
+}
+
+//void updateLCD(char currentDisplay[], char string[]){
+//    if (currentDisplay != string){
+//        Graphics_clearDisplay(&g_sContext); // Clear the display
+//        Graphics_flushBuffer(&g_sContext);
+//        GAME_STATE = WELCOME;
+//    }
+//}
