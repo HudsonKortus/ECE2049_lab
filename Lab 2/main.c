@@ -11,7 +11,8 @@ long unsigned int timer_cnt=0;
 long unsigned int prev_time=0;
 char tdir = 1;
 int SongNote = 0;
-int SONG[28];
+uint8_t led;
+uint8_t button;
 int flag = 0;
 
 void runtimerA2(void);
@@ -21,26 +22,18 @@ __interrupt void TimerA2_ISR (void);
 
 void configUserLED(char inbits);
 void configUserButtons(void);
-void getState(void);
+uint8_t getState(void);
 
 
 
 enum GAME_STATE { WELCOME = 0, COUNTDOWN = 1, PLAY_NOTE = 2, CHECK_NOTE = 3, GAME_OVER = 4, YOU_WIN = 5, EXIT = 6};
-GAME_STATE = YOU_WIN;
+GAME_STATE = GAME_OVER;
 
-struct song
-{
-    int songSize = 30;
-    unsigned char note[songSize] = {f,0,a,C,0,A,F,D,D,D,0,LG,D,F,A,HC,0,A,0,F,HE,HD,HD,0,0,G,0,C,F,0,C,0,G,0,C,0,G,F,0,E,0,C,C,C,0,0,C,C,C,0,0,D,D,F,0,A,C,0,A,F,D,D,D,0};
-    unsigned int beats[songSize] ={1  ,1, 1,  1, 1,  1, 1,  1,  1,  1, 4, 1,  1,  1,  1,  1, 1, 1, 1, 1,  3,  1,  1, 1,2, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1,  1, 1,2, 1,  1, 1,  1,2, 2,  2,  1, 1, 1,  1, 1,  1,1, 1, 1,   1,  1, 1, 1,  1,  1, 1,1, 1,  1,  1, 1, 1, 1, 1,  4, 1,  2,1, 1,  1,  1, 2,  1,  1,   1, 1,   1, 1,   2,  1,  1,  1,  1,  1,  1};
-    unsigned int frequency[songSize] = {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230};
+struct song {
+    unsigned int beats[50];
+    unsigned int frequency[50];
     };
 
-
-MiiSong = {
-    {0, 0, 0},
-    {0, 0, 0}
-};
 
 unsigned char currKey;
 int main(void) {
@@ -58,6 +51,12 @@ int main(void) {
 
     unsigned char currKey = getKey();
     unsigned char currKeyint = getKey();
+
+    struct song miiSong = {
+      {1  ,1, 1,  1, 1,  1, 1,  1,  1,  1, 4, 1,  1,  1,  1,  1, 1, 1, 1, 1,  3,  1,  1, 1,2, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1,  1, 1,2, 1,  1, 1,  1,2, 2,  2,  1, 1, 1,  1, 1,  1,1, 1, 1,   1,  1, 1, 1,  1,  1, 1,1, 1,  1,  1, 1, 1, 1, 1,  4, 1,  2,1, 1,  1,  1, 2,  1,  1,   1, 1,   1, 1,   2,  1,  1,  1,  1,  1,  1, 1},
+      {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230}
+    };
+
     while(1){
         int my_state = GAME_STATE;
         currKey = getKey();
@@ -121,20 +120,53 @@ int main(void) {
                     GAME_STATE = EXIT;
                     break;
                 }
+
                 //play the note via a function & flash an LED
-                BuzzerOn(MiiSong.frequency[SongNote]);
-                setLeds(BIT1); //change later
-                if((timer_cnt - prev_time) >= MiiSong.duration[SongNote]){
+                //BuzzerOn(miiSong.frequency[SongNote]);
+//                setLeds(BIT1); //change later
+                if((timer_cnt - prev_time) <= miiSong.beats[SongNote]*100){ //40
+//                  calculate which button and led to light and press
+                    BuzzerOn(miiSong.frequency[SongNote]);
+                    if ((miiSong.frequency[SongNote] >= 208)&&(miiSong.frequency[SongNote] < 321))
+                    {
+                        led = BIT0;
+                    }
+                    else if ((miiSong.frequency[SongNote] > 321)&&(miiSong.frequency[SongNote] < 434))
+                    {
+                        led = BIT1;
+                    }
+                    else if ((miiSong.frequency[SongNote] > 434)&&(miiSong.frequency[SongNote] < 547))
+                    {
+                        led = BIT2;
+                    }
+                    else if ((miiSong.frequency[SongNote] > 547)&&(miiSong.frequency[SongNote] <= 659))
+                    {
+                        led = BIT3;
+                    }
+                    setLeds(led);
+                    button |= getState();
+                    //check for button pressed
+
+                }else{
+                    if (led != button)
+                    {
+                        GAME_STATE = YOU_WIN;
+                    }
                     BuzzerOff();
-                    setLeds(0);
                     SongNote++;
-                    GAME_STATE = CHECK_NOTE;
+                    prev_time = timer_cnt;
                 }
-                GAME_STATE = PLAY_NOTE;
+
+                //start playing note for the duration of beats
+                //while playing check for button inputs
+                    //if button played is correct keep going
+                    //if incorrect button is played, imediatly end
+                //onec duration is over check weather correct button was played, if yes, increment to next note
                 break;
             case CHECK_NOTE:
                 break;
             case GAME_OVER:
+                setLeds(getState());
                 break;
             case YOU_WIN:
                 BuzzerOn(440);
@@ -232,7 +264,7 @@ void configUserButtons(void){
     //Configure # to be an interrupt pin
 
 }
-void getState(void){
+uint8_t getState(void){
         uint8_t result = 0x00;
         if (~P7IN & BIT0) {
             result = BIT3;
@@ -249,10 +281,3 @@ void getState(void){
         return result;
 }
 
-//void updateLCD(char currentDisplay[], char string[]){
-//    if (currentDisplay != string){
-//        Graphics_clearDisplay(&g_sContext); // Clear the display
-//        Graphics_flushBuffer(&g_sContext);
-//        GAME_STATE = WELCOME;
-//    }
-//}
