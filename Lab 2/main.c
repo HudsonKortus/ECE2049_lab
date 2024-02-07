@@ -132,7 +132,7 @@ int main(void) {
             case GAME_OVER:
                 break;
             case YOU_WIN:
-                BuzzerOn(8);
+                BuzzerOn(440);
                 break;
             case EXIT:
                 setLeds(0);

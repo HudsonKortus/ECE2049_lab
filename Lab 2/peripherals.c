@@ -4,7 +4,7 @@
  *  Created on: Jan 29, 2014
  *      Author: deemer
  *  Updated on Jan 3, 2016
- *  	smj
+ *      smj
  *  Updated on Jan 14, 2018
  *      smj
  *  Updated on Aug 22, 2018
@@ -71,8 +71,10 @@ void setLeds(unsigned char state)
  * Enable a PWM-controlled buzzer on P3.5
  * This function makes use of TimerB0.
  */
-void BuzzerOn(int kh)
+void BuzzerOn(int noteFZ)
 {
+
+    unsigned int ACLKPeriod = 32768;
     // Initialize PWM output on P3.5, which corresponds to TB0.5
     P3SEL |= BIT5; // Select peripheral output mode for P3.5
     P3DIR |= BIT5;
@@ -83,7 +85,7 @@ void BuzzerOn(int kh)
     // Now configure the timer period, which controls the PWM period
     // Doing this with a hard coded values is NOT the best method
     // We do it here only as an example. You will fix this in Lab 2.
-    TB0CCR0   = 73;                    // Set the PWM period in ACLK ticks
+    TB0CCR0   = (ACLKPeriod/noteFZ)+1;                    // Set the PWM period in ACLK ticks
     TB0CCTL0 &= ~CCIE;                  // Disable timer interrupts
 
     // Configure CC register 5, which is connected to our PWM pin TB0.5
@@ -194,14 +196,14 @@ void configDisplay(void)
     // Enable use of external clock crystals
      P5SEL |= (BIT5|BIT4|BIT3|BIT2);
 
-	// Initialize the display peripheral
-	Sharp96x96_Init();
+    // Initialize the display peripheral
+    Sharp96x96_Init();
 
     // Configure the graphics library to use this display.
-	// The global g_sContext is a data structure containing information the library uses
-	// to send commands for our particular display.
-	// You must pass this parameter to each graphics library function so it knows how to
-	// communicate with our display.
+    // The global g_sContext is a data structure containing information the library uses
+    // to send commands for our particular display.
+    // You must pass this parameter to each graphics library function so it knows how to
+    // communicate with our display.
     Graphics_initContext(&g_sContext, &g_sharp96x96LCD);
 
 
@@ -239,7 +241,7 @@ void setupSPI_DAC(void)
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt void TIMER1_A0_ISR (void)
 {
-	// Display is using Timer A1
-	// Not sure where Timer A1 is configured?
-	Sharp96x96_SendToggleVCOMCommand();  // display needs this toggle < 1 per sec
+    // Display is using Timer A1
+    // Not sure where Timer A1 is configured?
+    Sharp96x96_SendToggleVCOMCommand();  // display needs this toggle < 1 per sec
 }
