@@ -27,7 +27,7 @@ uint8_t getState(void);
 
 
 enum GAME_STATE { WELCOME = 0, COUNTDOWN = 1, PLAY_NOTE = 2, CHECK_NOTE = 3, GAME_OVER = 4, YOU_WIN = 5, EXIT = 6};
-GAME_STATE = GAME_OVER;
+GAME_STATE = WELCOME;
 
 struct song {
     unsigned int beats[50];
@@ -150,11 +150,12 @@ int main(void) {
                 }else{
                     if (led != button)
                     {
-                        GAME_STATE = YOU_WIN;
+                        GAME_STATE = GAME_OVER;
                     }
                     BuzzerOff();
                     SongNote++;
                     prev_time = timer_cnt;
+                    button = 0;
                 }
 
                 //start playing note for the duration of beats
@@ -167,15 +168,25 @@ int main(void) {
                 break;
             case GAME_OVER:
                 setLeds(getState());
+                Graphics_drawStringCentered(&g_sContext, "you lose :( :( :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
                 break;
             case YOU_WIN:
+                setLeds(0);
                 BuzzerOn(440);
                 break;
             case EXIT:
                 setLeds(0);
+                BuzzerOff();
                 Graphics_clearDisplay(&g_sContext); // Clear the display
                 GAME_STATE = WELCOME;
                 break;
+        }
+
+
+        currKey = getKey();
+        if (currKey == 35) //#
+        {
+            GAME_STATE = EXIT;
         }
     }
 }
@@ -246,19 +257,19 @@ void configUserLED(char inbits){
 }
 void configUserButtons(void){
     P7SEL &= (BIT0|BIT4); //S1, S4
-    P3SEL &= (BIT7); //S2
+    P3SEL &= (BIT6); //S2
     P2SEL &- (BIT2); //S3
 
     P7DIR &= (BIT0|BIT4); //S1, S4
-    P3DIR &= (BIT7); //S2
+    P3DIR &= (BIT6); //S2
     P2DIR &- (BIT2); //S3
 
     P7REN |= (BIT0|BIT4); //S1, S4
-    P3REN |= (BIT7); //S2
+    P3REN |= (BIT6); //S2
     P2REN |= (BIT2); //S3\
 
     P7OUT |= (BIT0|BIT4); //S1, S4
-    P3OUT |= (BIT7); //S2
+    P3OUT |= (BIT6); //S2
     P2OUT |= (BIT2); //S3
 
     //Configure # to be an interrupt pin
@@ -266,10 +277,10 @@ void configUserButtons(void){
 }
 uint8_t getState(void){
         uint8_t result = 0x00;
-        if (~P7IN & BIT0) {
+        if (~P7IN & BIT0) {//sw1
             result = BIT3;
         }
-        if (~P3IN & BIT7) {
+        if (~P3IN & BIT6) {
             result = BIT2;
         }
         if (~P2IN & BIT2) {
