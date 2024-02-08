@@ -12,7 +12,7 @@ long unsigned int prev_time=0;
 char tdir = 1;
 int SongNote = 0;
 uint8_t led;
-uint8_t button;
+uint8_t button = 0;
 int flag = 0;
 
 void runtimerA2(void);
@@ -45,6 +45,7 @@ int main(void) {
     initLeds();
     configDisplay();
     configKeypad();
+    configUserButtons();
 
     int ticksPerSec = 100;
     int LEDbit = 0;
@@ -60,6 +61,7 @@ int main(void) {
     while(1){
         int my_state = GAME_STATE;
         currKey = getKey();
+        button |= getState();
         char currKeyint = getKey();
         switch(GAME_STATE){
             case WELCOME: //display Welcome Screen
@@ -144,11 +146,11 @@ int main(void) {
                         led = BIT3;
                     }
                     setLeds(led);
-                    button |= getState();
+//                    button |= getState();
                     //check for button pressed
 
                 }else{
-                    if (led != button)
+                    if ((led != button)&&(miiSong.frequency[SongNote] != 0))
                     {
                         GAME_STATE = GAME_OVER;
                     }
@@ -167,12 +169,14 @@ int main(void) {
             case CHECK_NOTE:
                 break;
             case GAME_OVER:
-                setLeds(getState());
+                setLeds(0); //setLeds(getState())
                 Graphics_drawStringCentered(&g_sContext, "you lose :( :( :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                GAME_STATE = EXIT;
                 break;
             case YOU_WIN:
-                setLeds(0);
-                BuzzerOn(440);
+                setLeds(0); //setLeds(getState())
+                Graphics_drawStringCentered(&g_sContext, "you win :) :) :) ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                GAME_STATE = EXIT;
                 break;
             case EXIT:
                 setLeds(0);
@@ -256,13 +260,13 @@ void configUserLED(char inbits){
 
 }
 void configUserButtons(void){
-    P7SEL &= (BIT0|BIT4); //S1, S4
-    P3SEL &= (BIT6); //S2
-    P2SEL &- (BIT2); //S3
+    P7SEL &= ~(BIT0|BIT4); //S1, S4
+    P3SEL &= ~(BIT6); //S2
+    P2SEL &- ~(BIT2); //S3
 
-    P7DIR &= (BIT0|BIT4); //S1, S4
-    P3DIR &= (BIT6); //S2
-    P2DIR &- (BIT2); //S3
+    P7DIR &= ~(BIT0|BIT4); //S1, S4
+    P3DIR &= ~(BIT6); //S2
+    P2DIR &- ~(BIT2); //S3
 
     P7REN |= (BIT0|BIT4); //S1, S4
     P3REN |= (BIT6); //S2
@@ -288,6 +292,9 @@ uint8_t getState(void){
         }
         if (~P7IN & BIT4) { //bit 4 is set
             result = BIT0;
+        }
+        else{
+            result = 0;
         }
         return result;
 }
