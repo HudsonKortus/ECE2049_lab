@@ -67,7 +67,7 @@ int main(void) {
       {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230}
     };
 
-    GAME_STATE my_state = CHECK_NOTE;
+    GAME_STATE my_state = WELCOME;
 
     while(1){
         currKey = getKey();
@@ -154,7 +154,7 @@ int main(void) {
                     //check for button pressed
                     button |= currButton;
                 }else{
-                    if ((led != button)&&(miiSong.frequency[SongNote] != 0))
+                    if ((led != currButton)&&(miiSong.frequency[SongNote] != 0))
                     {
                         my_state = GAME_OVER;
                         prev_time = timer_cnt;
