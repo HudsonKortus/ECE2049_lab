@@ -12,7 +12,6 @@ long unsigned int prev_time=0;
 char tdir = 1;
 int SongNote = 0;
 uint8_t led;
-uint8_t button = 0; //0
 int flag = 0;
 
 void runtimerA2(void);
@@ -30,7 +29,7 @@ typedef enum {
     WELCOME = 0,
     COUNTDOWN = 1,
     PLAY_NOTE = 2,
-    CHECK_NOTE = 3,
+    LIFE_LOST = 3,
     GAME_OVER = 4,
     YOU_WIN = 5,
     EXIT = 6
@@ -58,8 +57,11 @@ int main(void) {
     int ticksPerSec = 100;
     int LEDbit = 0;
 
+    int speed = 75;
+    int lives = 3;
+
     unsigned char currKey = getKey();
-    unsigned char currButton = getState();
+    uint8_t currButton = getState();
     unsigned char currKeyint = getKey();
 
     struct song miiSong = {
@@ -71,14 +73,24 @@ int main(void) {
 
     while(1){
         currKey = getKey();
-        currButton = getState();
+        currButton |= getState();
 
-        button |= currButton;
         char currKeyint = getKey();
         switch(my_state){
             case WELCOME: //display Welcome Screen
                setLeds(0);
-               Graphics_drawStringCentered(&g_sContext, "Guitar Hero", AUTO_STRING_LENGTH, 48, 15, TRANSPARENT_TEXT);
+               Graphics_drawStringCentered(&g_sContext, "Guitar Hero", AUTO_STRING_LENGTH, 48, 10, TRANSPARENT_TEXT);
+                   Graphics_drawStringCentered(&g_sContext, "'&`", AUTO_STRING_LENGTH, 48, 20, TRANSPARENT_TEXT);
+                  Graphics_drawStringCentered(&g_sContext, "#", AUTO_STRING_LENGTH, 48, 30, TRANSPARENT_TEXT);
+                 Graphics_drawStringCentered(&g_sContext, "#", AUTO_STRING_LENGTH, 48, 40, TRANSPARENT_TEXT);
+                 Graphics_drawStringCentered(&g_sContext, "_#_", AUTO_STRING_LENGTH, 48, 50, TRANSPARENT_TEXT);
+                 Graphics_drawStringCentered(&g_sContext, "( # )", AUTO_STRING_LENGTH, 48, 60, TRANSPARENT_TEXT);
+                 Graphics_drawStringCentered(&g_sContext, "/ 0 \\", AUTO_STRING_LENGTH, 48, 70, TRANSPARENT_TEXT);
+               Graphics_drawStringCentered(&g_sContext, "( === )", AUTO_STRING_LENGTH, 48, 80, TRANSPARENT_TEXT);
+               Graphics_drawStringCentered(&g_sContext, "`---'", AUTO_STRING_LENGTH, 48, 90, TRANSPARENT_TEXT);
+
+
+
                Graphics_flushBuffer(&g_sContext);
                if (currKey == 42)
                {
@@ -131,7 +143,8 @@ int main(void) {
                 //play the note via a function & flash an LED
                 //BuzzerOn(miiSong.frequency[SongNote]);
 //                setLeds(BIT1); //change later
-                if((timer_cnt - prev_time) <= miiSong.beats[SongNote]*100){ //40
+                if((timer_cnt - prev_time) <= miiSong.beats[SongNote]*speed){ //40
+                    Graphics_clearDisplay(&g_sContext);
 //                  calculate which button and led to light and press
                     BuzzerOn(miiSong.frequency[SongNote]);
                     if ((miiSong.frequency[SongNote] >= 208)&&(miiSong.frequency[SongNote] < 321))
@@ -152,18 +165,16 @@ int main(void) {
                     }
                     setLeds(led);
                     //check for button pressed
-                    button |= currButton;
-                }else{
-                    if ((led != currButton)&&(miiSong.frequency[SongNote] != 0))
-                    {
-                        my_state = GAME_OVER;
-                        prev_time = timer_cnt;
-                    }
+                    currButton |= getState();
+                }else{ //note is finished playing
+                    prev_time = timer_cnt;
                     BuzzerOff();
                     SongNote++;
-                    prev_time = timer_cnt;
-                    button = 0;
                     currButton = 0;
+                    if ((led != currButton)&&(miiSong.frequency[SongNote] != 0)) //if player misses note
+                    {
+                        my_state = LIFE_LOST;
+                    }
                 }
 
                 //start playing note for the duration of beats
@@ -172,16 +183,49 @@ int main(void) {
                     //if incorrect button is played, imediatly end
                 //onec duration is over check weather correct button was played, if yes, increment to next note
                 break;
-            case CHECK_NOTE:
-                button = getState();
+            case  LIFE_LOST:
+               BuzzerOn(116);
+               if ((timer_cnt-prev_time) < 33){
+                   setLeds(15);
+               }
+               else if((timer_cnt-prev_time) < 66){
+                   setLeds(0);
+               }
+               else if ((timer_cnt-prev_time) < 100){
+                   setLeds(15);
+               }
+               else if ((timer_cnt-prev_time) < 133){
+                   setLeds(0);
+               }
+               else{
+                   lives--;
+                   my_state = PLAY_NOTE;
+               }
 
-                setLeds(button);
-                my_state = CHECK_NOTE;
+               //Graphics_drawStringCentered(&g_sContext, "You messed up; lives = " + lives , AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+               if (lives <= 0) {
+                   my_state = GAME_OVER;
+                   prev_time = timer_cnt;
+               }
+
                 break;
             case GAME_OVER:
                 setLeds(0); //setLeds(getState())
-                Graphics_drawStringCentered(&g_sContext, "you lose :( :( :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
-                my_state = EXIT;
+                if ((timer_cnt - prev_time) < (400)){
+                    Graphics_drawStringCentered(&g_sContext, ":( you lose :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                    Graphics_drawStringCentered(&g_sContext, "xD xD your bad xD xD", AUTO_STRING_LENGTH, 48, 25, OPAQUE_TEXT);
+//                    if ((timer_cnt - prev_time) % 10 == 1){
+//                        setLeds(BIT3|BIT2|BIT1|BIT0);
+//                    }
+//                    else{
+//                        setLeds(0);
+//                    }
+                }
+                else{
+                    my_state = EXIT;
+                    prev_time = 0;
+                }
+                Graphics_flushBuffer(&g_sContext);
                 break;
             case YOU_WIN:
                 setLeds(0); //setLeds(getState())
@@ -192,8 +236,8 @@ int main(void) {
                 setLeds(0);
                 BuzzerOff();
                 Graphics_clearDisplay(&g_sContext); // Clear the display
-                button = 0;
                 currButton = 0;
+                SongNote = 0;
                 my_state = WELCOME;
                 break;
         }
@@ -253,6 +297,10 @@ void configUserButtons(void){
     P7REN |= (BIT0|BIT4); //S1, S4
     P3REN |= (BIT6); //S2
     P2REN |= (BIT2); //S3
+
+//    P7OUT |= (BIT0|BIT4); //S1, S4
+//    P3OUT |= (BIT6); //S2
+//    P2OUT |= (BIT2); //S3
 }
 uint8_t getState(void){
         uint8_t result = 0x00;
@@ -268,6 +316,7 @@ uint8_t getState(void){
         if (~P7IN & BIT4) { //bit 4 is set
             result |= BIT0;
         }
+
         return result;
 }
 
