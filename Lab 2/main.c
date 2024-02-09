@@ -61,7 +61,7 @@ int main(void) {
     int lives = 3;
 
     unsigned char currKey = getKey();
-    uint8_t currButton = getState();
+    uint8_t currButton = 0;
     unsigned char currKeyint = getKey();
 
     struct song miiSong = {
@@ -73,7 +73,6 @@ int main(void) {
 
     while(1){
         currKey = getKey();
-        currButton |= getState();
 
         char currKeyint = getKey();
         switch(my_state){
@@ -170,11 +169,13 @@ int main(void) {
                     prev_time = timer_cnt;
                     BuzzerOff();
                     SongNote++;
-                    currButton = 0;
+
                     if ((led != currButton)&&(miiSong.frequency[SongNote] != 0)) //if player misses note
                     {
+                        currButton = 0;
                         my_state = LIFE_LOST;
                     }
+                    currButton = 0;
                 }
 
                 //start playing note for the duration of beats
@@ -229,8 +230,9 @@ int main(void) {
                 break;
             case YOU_WIN:
                 setLeds(0); //setLeds(getState())
-                Graphics_drawStringCentered(&g_sContext, "you win :) :) :) ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
-                my_state = EXIT;
+                //Graphics_drawStringCentered(&g_sContext, "you win :) :) :) ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                //my_state = EXIT;
+                setLeds(getState());
                 break;
             case EXIT:
                 setLeds(0);
