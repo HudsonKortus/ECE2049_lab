@@ -21,7 +21,7 @@ __interrupt void TimerA2_ISR (void);
 
 void configUserLED(char inbits);
 void configUserButtons(void);
-uint8_t getState(void);
+uint8_t getState(void); //uint8_t
 
 
 
@@ -37,14 +37,13 @@ typedef enum {
 //GAME_STATE my_state = CHECK_NOTE;
 
 struct song {
-    unsigned int beats[50];
-    unsigned int frequency[50];
+    unsigned int beats[100];
+    unsigned int frequency[100];
     };
 
 
 unsigned char currKey;
 int main(void) {
-    char currentDisplay[] = "new";
     WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
     _BIS_SR(GIE); //enables interrupts
     runtimerA2(); //start timer
@@ -54,19 +53,19 @@ int main(void) {
     configKeypad();
     configUserButtons();
 
-    int ticksPerSec = 100;
-    int LEDbit = 0;
+    //int ticksPerSec = 100;
+   // int LEDbit = 0;
 
-    int speed = 75;
-    int lives = 3;
+    int speed = 80;
+    int lives = 5;
 
     unsigned char currKey = getKey();
     uint8_t currButton = 0;
     unsigned char currKeyint = getKey();
 
     struct song miiSong = {
-      {1  ,1, 1,  1, 1,  1, 1,  1,  1,  1, 4, 1,  1,  1,  1,  1, 1, 1, 1, 1,  3,  1,  1, 1,2, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1,  1, 1,2, 1,  1, 1,  1,2, 2,  2,  1, 1, 1,  1, 1,  1,1, 1, 1,   1,  1, 1, 1,  1,  1, 1,1, 1,  1,  1, 1, 1, 1, 1,  4, 1,  2,1, 1,  1,  1, 2,  1,  1,   1, 1,   1, 1,   2,  1,  1,  1,  1,  1,  1, 1},
-      {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230}
+      .beats = {1  ,1, 1,  1, 1,  1, 1,  1,  1,  1, 4, 1,  1,  1,  1,  1, 1, 1, 1, 1,  3,  1,  1, 1,2, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1,  1, 1,2, 1,  1, 1,  1,2, 2,  2,  1, 1, 1,  1, 1,  1,1, 1, 1,   1,  1, 1, 1,  1,  1, 1,1, 1,  1,  1, 1, 1, 1, 1,  4, 1,  2,1, 1,  1,  1, 2,  1,  1,   1, 1,   1, 1,   2,  1,  1,  1,  1,  1,  1, 1},
+      .frequency = {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230}
     };
 
     GAME_STATE my_state = WELCOME;
@@ -91,7 +90,7 @@ int main(void) {
 
 
                Graphics_flushBuffer(&g_sContext);
-               if (currKey == 42)
+               if (currKey == '*')
                {
                    my_state = COUNTDOWN;
                    Graphics_clearDisplay(&g_sContext); // Clear the display
@@ -103,19 +102,13 @@ int main(void) {
                prev_time = timer_cnt;
                break;
             case COUNTDOWN: //counts down
-                currKeyint = (getKey() - 48);
-                currKey = getKey();
                 Graphics_flushBuffer(&g_sContext);
                 //prev_time = timer_cnt;
-                 if (currKey == 35) //#
-                 {
-                     my_state = EXIT;
-                     break;
-                 }
                  if ((timer_cnt - prev_time) > (500)){
                      setLeds(0);
                      Graphics_clearDisplay(&g_sContext); // Clear the display
                      prev_time = timer_cnt;
+                     currButton = 0;
                      my_state = PLAY_NOTE;
                  }
                  else if ((timer_cnt - prev_time) > (400)){
@@ -142,8 +135,14 @@ int main(void) {
                 //play the note via a function & flash an LED
                 //BuzzerOn(miiSong.frequency[SongNote]);
 //                setLeds(BIT1); //change later
+//                if(SongNote == (frequency.size()-1)){
+//                    my_state = YOU_WIN;
+//                }
                 if((timer_cnt - prev_time) <= miiSong.beats[SongNote]*speed){ //40
+                    //check for button pressed
+                    currButton |= getState();
                     Graphics_clearDisplay(&g_sContext);
+
 //                  calculate which button and led to light and press
                     BuzzerOn(miiSong.frequency[SongNote]);
                     if ((miiSong.frequency[SongNote] >= 208)&&(miiSong.frequency[SongNote] < 321))
@@ -162,9 +161,13 @@ int main(void) {
                     {
                         led = BIT3;
                     }
+                    else if (miiSong.frequency[SongNote] == 0)
+                    {
+                        led = 0;
+                    }
                     setLeds(led);
                     //check for button pressed
-                    currButton |= getState();
+//                    currButton |= getState();
                 }else{ //note is finished playing
                     prev_time = timer_cnt;
                     BuzzerOff();
@@ -200,6 +203,7 @@ int main(void) {
                }
                else{
                    lives--;
+                   prev_time = timer_cnt;
                    my_state = PLAY_NOTE;
                }
 
@@ -230,9 +234,21 @@ int main(void) {
                 break;
             case YOU_WIN:
                 setLeds(0); //setLeds(getState())
-                //Graphics_drawStringCentered(&g_sContext, "you win :) :) :) ", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
-                //my_state = EXIT;
-                setLeds(getState());
+                                if ((timer_cnt - prev_time) < (400)){
+                                    Graphics_drawStringCentered(&g_sContext, ":( you lose :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                                    Graphics_drawStringCentered(&g_sContext, "xD xD your bad xD xD", AUTO_STRING_LENGTH, 48, 25, OPAQUE_TEXT);
+                //                    if ((timer_cnt - prev_time) % 10 == 1){
+                //                        setLeds(BIT3|BIT2|BIT1|BIT0);
+                //                    }
+                //                    else{
+                //                        setLeds(0);
+                //                    }
+                                }
+                                else{
+                                    my_state = EXIT;
+                                    prev_time = 0;
+                                }
+                                Graphics_flushBuffer(&g_sContext);
                 break;
             case EXIT:
                 setLeds(0);
@@ -240,6 +256,7 @@ int main(void) {
                 Graphics_clearDisplay(&g_sContext); // Clear the display
                 currButton = 0;
                 SongNote = 0;
+                lives = 5;
                 my_state = WELCOME;
                 break;
         }
@@ -300,10 +317,11 @@ void configUserButtons(void){
     P3REN |= (BIT6); //S2
     P2REN |= (BIT2); //S3
 
-//    P7OUT |= (BIT0|BIT4); //S1, S4
-//    P3OUT |= (BIT6); //S2
-//    P2OUT |= (BIT2); //S3
+    P7OUT |= (BIT0|BIT4); //S1, S4
+    P3OUT |= (BIT6); //S2
+    P2OUT |= (BIT2); //S3
 }
+
 uint8_t getState(void){
         uint8_t result = 0x00;
         if (~P7IN & BIT0) {//sw1
@@ -321,4 +339,98 @@ uint8_t getState(void){
 
         return result;
 }
+
+//char getState(void){
+//    char holderS1 = 0x00;
+//    char holderS2 = 0x00;
+//    char holderS3 = 0x00;
+//    char holderS4 = 0x00;
+//    char outBits = 0x00;
+//
+//    holderS1 |= (P7IN & BIT0);
+//
+//    holderS2 |= (P3IN & BIT6);
+//    holderS2 = holderS2 >> 5;
+//
+//    holderS3 |= (P2IN & BIT2);
+//
+//    holderS4 |= (P7IN & BIT4);
+//    holderS4 = holderS4 >> 1;
+//
+//
+//    outBits = holderS1 | holderS2 | holderS3 | holderS4;
+//
+//
+//    switch (outBits) {
+//       case 0: {
+//           return 15;
+//           break;
+//       }
+//       case 1: {
+//           return 14;
+//           break;
+//       }
+//       case 2: {
+//          return 13;
+//          break;
+//       }
+//       case 3: {
+//           return 12;
+//         break;
+//       }
+//
+//       case 4:{
+//          return 11;
+//          break;
+//       }
+//       case 5:{
+//          return 10;
+//          break;
+//       }
+//       case 6:{
+//          return 9;
+//          break;
+//       }
+//       case 7:{
+//          return 8;
+//          break;
+//       }
+//       case 8:{
+//          return 7;
+//          break;
+//       }
+//       case 9:{
+//          return 6;
+//          break;
+//       }
+//       case 10:{
+//          return 5;
+//          break;
+//       }
+//       case 11:{
+//          return 4;
+//          break;
+//       }
+//       case 12:{
+//          return 3;
+//          break;
+//       }
+//       case 13:{
+//          return 2;
+//          break;
+//       }
+//       case 14:{
+//          return 1;
+//          break;
+//       }
+//       case 15:{
+//          return 0;
+//          break;
+//       }
+//
+//    }
+//
+//    return outBits;
+//}
+
 
