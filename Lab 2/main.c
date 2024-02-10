@@ -37,6 +37,7 @@ typedef enum {
 //GAME_STATE my_state = CHECK_NOTE;
 
 struct song {
+    int size;
     unsigned int beats[100];
     unsigned int frequency[100];
     };
@@ -64,11 +65,12 @@ int main(void) {
     unsigned char currKeyint = getKey();
 
     struct song miiSong = {
+      .size = 100,
       .beats = {1  ,1, 1,  1, 1,  1, 1,  1,  1,  1, 4, 1,  1,  1,  1,  1, 1, 1, 1, 1,  3,  1,  1, 1,2, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1,  1, 1,2, 1,  1, 1,  1,2, 2,  2,  1, 1, 1,  1, 1,  1,1, 1, 1,   1,  1, 1, 1,  1,  1, 1,1, 1,  1,  1, 1, 1, 1, 1,  4, 1,  2,1, 1,  1,  1, 2,  1,  1,   1, 1,   1, 1,   2,  1,  1,  1,  1,  1,  1, 1},
       .frequency = {370,0,440,554,0,440,370,294,294,294,0,208,294,370,440,550,0,440,0,370,659,622,587,0,0,415,0,554,370,0,554,0,415,0,554,0,392,370,0,330,0,262,262,262,0,0,277,277,261,0,0,311,294,370,0,440,554,0,440,0,370,294,294,294,0,659,659,659,0,0,370,440,554,0,440,0,370,659,587,0,0,493,392,293,262,493,415,293,440,370,263,247,349,293,247,230,230,230}
     };
 
-    GAME_STATE my_state = WELCOME;
+    GAME_STATE my_state = YOU_WIN;
 
     while(1){
         currKey = getKey();
@@ -135,9 +137,9 @@ int main(void) {
                 //play the note via a function & flash an LED
                 //BuzzerOn(miiSong.frequency[SongNote]);
 //                setLeds(BIT1); //change later
-//                if(SongNote == (frequency.size()-1)){
-//                    my_state = YOU_WIN;
-//                }
+                if(SongNote == (miiSong.size)){
+                    my_state = YOU_WIN;
+                }
                 if((timer_cnt - prev_time) <= miiSong.beats[SongNote]*speed){ //40
                     //check for button pressed
                     currButton |= getState();
@@ -235,8 +237,8 @@ int main(void) {
             case YOU_WIN:
                 setLeds(0); //setLeds(getState())
                                 if ((timer_cnt - prev_time) < (400)){
-                                    Graphics_drawStringCentered(&g_sContext, ":( you lose :(", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
-                                    Graphics_drawStringCentered(&g_sContext, "xD xD your bad xD xD", AUTO_STRING_LENGTH, 48, 25, OPAQUE_TEXT);
+                                    Graphics_drawStringCentered(&g_sContext, ":) YOU WIN :)", AUTO_STRING_LENGTH, 48, 15, OPAQUE_TEXT);
+                                    Graphics_drawStringCentered(&g_sContext, "^-^ Congrats! ^-^", AUTO_STRING_LENGTH, 48, 25, OPAQUE_TEXT);
                 //                    if ((timer_cnt - prev_time) % 10 == 1){
                 //                        setLeds(BIT3|BIT2|BIT1|BIT0);
                 //                    }
