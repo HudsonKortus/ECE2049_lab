@@ -2,29 +2,30 @@
 /**************  13 March 2019   ******************/
 /***************************************************/
 
-
+//define libraries
 #include <msp430.h>
 #include <stdio.h>
 #include "peripherals.h"
 
-long unsigned int timer_cnt=0;
-long unsigned int prev_time=0;
-char tdir = 1;
-int SongNote = 0;
-uint8_t led;
-int flag = 0;
+//define global counter variables used for time keeping
+long unsigned int timer_cnt=0;//this is the timer that inreses every .001 seconds
+long unsigned int prev_time=0;//used to keep track of time intervals
+char tdir = 1;//timer count direction
 
-void runtimerA2(void);
-void stoptimerA2(int reset);
-__interrupt void TimerA2_ISR (void);
-//void updateLCD(char currentDisplay[], char string[]);
+//
+int SongNote = 0;//index for the song we play
+uint8_t led; // char used to turn on and off leds
 
-void configUserLED(char inbits);
-void configUserButtons(void);
+void runtimerA2(void);// start timer which will cause an interrupt to run every .001 seconds and increment timer_cnt
+void stoptimerA2(int reset); //stop timer
+__interrupt void TimerA2_ISR (void); //interrupt service routine which will run every .001 seconds and increment timer_cnt
+
+void configUserLED(char inbits);//sets up leds
+void configUserButtons(void);//sets up user buttons
 uint8_t getState(void); //uint8_t
 
 
-
+//states for state machine
 typedef enum {
     WELCOME = 0,
     COUNTDOWN = 1,
@@ -34,35 +35,35 @@ typedef enum {
     YOU_WIN = 5,
     EXIT = 6
 } GAME_STATE;
-//GAME_STATE my_state = CHECK_NOTE;
 
+//struct used to store the song played
 struct song {
     int size;
-    unsigned int beats[100];
-    unsigned int frequency[100];
+    unsigned int beats[100]; // number of eighth notes per note
+    unsigned int frequency[100]; // Frequency of each note
     };
 
 
-unsigned char currKey;
+unsigned char currKey;// stores launchpad button input in char
+
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
     _BIS_SR(GIE); //enables interrupts
     runtimerA2(); //start timer
 
+    //configure I/O before starting
     initLeds();
     configDisplay();
     configKeypad();
     configUserButtons();
 
-    //int ticksPerSec = 100;
-   // int LEDbit = 0;
 
-    int speed = 80;
-    int lives = 5;
+    int speed = 80; //speed variable for game- decrease to make the game harder
+    int lives = 5; //number of lives or mistakes player has
 
-    unsigned char currKey = getKey();
-    uint8_t currButton = 0;
-    unsigned char currKeyint = getKey();
+    unsigned char currKey = getKey();// poll number pad for input and store it
+
+    uint8_t currButton = 0; //
 
     struct song miiSong = {
       .size = 100,
@@ -75,7 +76,6 @@ int main(void) {
     while(1){
         currKey = getKey();
 
-        char currKeyint = getKey();
         switch(my_state){
             case WELCOME: //display Welcome Screen
                setLeds(0);
